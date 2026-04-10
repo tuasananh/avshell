@@ -1,8 +1,9 @@
+#include <assert.h>
 #include <fcntl.h>
 #include <io.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <wchar.h>
+#include <strsafe.h>
 #include <windows.h>
 
 #include "dispatcher.h"
@@ -32,15 +33,18 @@ int main() {
   while (true) {
     wprintf(L"%ls", prompt);
 
-    if (fgetws(input_buffer, MAX_INPUT_SIZE, stdin) == NULL) {
-      wprintf(L"Error reading input. Ignoring...\n");
-      continue;
+    HRESULT result = StringCchGetsW(input_buffer, MAX_INPUT_SIZE);
+
+    if (FAILED(result)) {
+      wprintf(L"The command was too long. Please try again.\n");
     }
 
-    size_t input_len = wcslen(input_buffer);
+    size_t input_len;
+    result = StringCchLengthW(input_buffer, MAX_INPUT_SIZE, &input_len);
+    assert(SUCCEEDED(result));
 
     // If user did not just press Enter
-    if (input_len != 1 || input_buffer[0] != L'\n') {
+    if (input_len != 0) {
       int argc;
       LPWSTR* argv = CommandLineToArgvW(input_buffer, &argc);
 
