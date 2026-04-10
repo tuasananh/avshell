@@ -10,6 +10,9 @@ typedef struct ExecutionResult {
 #define KEEP_RUNNING(code) \
   ((ExecutionResult){.keep_running = true, .exit_code = (code)})
 #define END_SHELL(code) \
-  ((ExecutionResult){.keep_running = true, .exit_code = (code)})
+  ((ExecutionResult){.keep_running = false, .exit_code = (code)})
+
+ExecutionResult keep_running_with_error(LPWSTR command, DWORD error_code,
+                                        LPWSTR message);
 
 ExecutionResult dispatch_command(int argc, LPWSTR* argv);
