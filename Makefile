@@ -1,19 +1,20 @@
 CPP = gcc
 FLAGS = -Wall -Wextra -O2
+COMMAND = ${CPP} ${FLAGS}
 # SRCPP = $(wildcard *.c)
 
 main: main.c dispatcher.o command.o help.o exit.o
-	${CPP} ${FLAGS} -o main $^
+	${COMMAND} -o main $^
 
 dispatcher.o: dispatcher.c
-	${CPP} ${FLAGS} -c $^
+	${COMMAND} -c $^
 
 command.o: command.c
-	${CPP} ${FLAGS} -c $^
+	${COMMAND} -c $^
 
 help.o: help.c
-	${CPP} ${FLAGS} -c $^
+	${COMMAND} -c $^
 
 exit.o: exit.c
-	${CPP} ${FLAGS} -c $^
+	${COMMAND} -c $^
 
