@@ -7,6 +7,7 @@
 #include <windows.h>
 
 #include "dispatcher.h"
+#include "process_manager.h"
 
 #define MAX_INPUT_SIZE 1024
 
@@ -15,7 +16,7 @@ WCHAR input_buffer[MAX_INPUT_SIZE];
 LPWSTR get_prompt() {
   DWORD length = GetCurrentDirectoryW(0, NULL);
   LPWSTR prompt = (LPWSTR)malloc((length + 3) * sizeof(WCHAR));
-  GetCurrentDirectoryW(length, prompt);
+  GetCurrentDirectoryW(length + 3, prompt);
   prompt[length - 1] = L'\n';
   prompt[length] = L'>';
   prompt[length + 1] = L' ';
@@ -35,10 +36,12 @@ BOOL WINAPI console_ctrl_handler(DWORD ctrl_type) {
 int main() {
   _setmode(_fileno(stdout), _O_U16TEXT);  // Set stdout to Unicode mode
   SetConsoleCtrlHandler(console_ctrl_handler, TRUE);
+  process_manager_init();
 
   int exit_code = 0;
 
   while (true) {
+    clean_dead_processes();
     LPWSTR prompt = get_prompt();
     wprintf(L"%ls", prompt);
     free(prompt);  // we are done
@@ -73,5 +76,6 @@ int main() {
     wprintf(L"\n");
   }
 
+  process_manager_cleanup();
   return exit_code;
 }

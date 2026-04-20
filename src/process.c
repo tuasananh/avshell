@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <wchar.h>
 
+#include "process_manager.h"
+
 // Encodes the input string and wraps it in the PowerShell command directly.
 // Returns a single allocated string. Caller must call free() on it.
 static LPWSTR wrap_in_powershell_encoded_command(LPCWSTR input_buffer) {
@@ -64,6 +66,15 @@ static LPWSTR wrap_in_powershell_encoded_command(LPCWSTR input_buffer) {
 }
 
 ExecutionResult run_process(LPWSTR input_buffer, bool run_in_background) {
+  size_t len = wcslen(input_buffer);
+  while (len > 0 &&
+         (input_buffer[len - 1] == L'\n' || input_buffer[len - 1] == L'\r' ||
+          input_buffer[len - 1] == L' ')) {
+    input_buffer[--len] = L'\0';
+  }
+
+  if (len == 0) return KEEP_RUNNING(0);
+
   STARTUPINFOW si;
   PROCESS_INFORMATION pi;
 
@@ -102,10 +113,8 @@ ExecutionResult run_process(LPWSTR input_buffer, bool run_in_background) {
 
   if (!success) {
     DWORD error_code = GetLastError();
-
     if (error_code == ERROR_FILE_NOT_FOUND) {
       LPWSTR ps_cmd = wrap_in_powershell_encoded_command(input_buffer);
-
       if (ps_cmd != NULL) {
         success = CreateProcessW(NULL, ps_cmd, NULL, NULL, inherit_handles,
                                  creation_flags, NULL, NULL, &si, &pi);
@@ -134,12 +143,17 @@ ExecutionResult run_process(LPWSTR input_buffer, bool run_in_background) {
   }
 
   DWORD exit_code = EXIT_SUCCESS;
+
   if (!run_in_background) {
     WaitForSingleObject(pi.hProcess, INFINITE);
     GetExitCodeProcess(pi.hProcess, &exit_code);
+    CloseHandle(pi.hProcess);
+  } else {
+    add_background_process(pi.dwProcessId, pi.hProcess, input_buffer);
+    wprintf(L"[%zu] Process started with PID: %d\n", process_manager_count(),
+            pi.dwProcessId);
   }
 
-  if (pi.hProcess != NULL) CloseHandle(pi.hProcess);
   if (pi.hThread != NULL) CloseHandle(pi.hThread);
 
   if (hNullIn != INVALID_HANDLE_VALUE) {
