@@ -27,6 +27,7 @@ bool vector_push(Vector* v, const void* element) {
 }
 
 void* vector_get(const Vector* v, size_t index) {
+  if (index >= v->size) return NULL;
   return (char*)v->data + index * v->element_size;
 }
 
