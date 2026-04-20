@@ -150,7 +150,7 @@ ExecutionResult run_process(LPWSTR input_buffer, bool run_in_background) {
     CloseHandle(pi.hProcess);
   } else {
     add_background_process(pi.dwProcessId, pi.hProcess, input_buffer);
-    wprintf(L"[%d] Process started with PID: %d\n", bg_process_count,
+    wprintf(L"[%zu] Process started with PID: %d\n", process_manager_count(),
             pi.dwProcessId);
   }
 

@@ -23,7 +23,7 @@ static ExecutionResult handler(int argc, LPWSTR* argv) {
     return KEEP_RUNNING(1);
   }
 
-  if (TerminateProcess(bg_processes[index].handle, 0)) {
+  if (TerminateProcess(process_manager_get(index)->handle, 0)) {
     wprintf(L"Process %lu terminated successfully.\n", target_pid);
     remove_background_process(target_pid);
   } else {

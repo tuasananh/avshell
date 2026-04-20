@@ -36,6 +36,7 @@ BOOL WINAPI console_ctrl_handler(DWORD ctrl_type) {
 int main() {
   _setmode(_fileno(stdout), _O_U16TEXT);  // Set stdout to Unicode mode
   SetConsoleCtrlHandler(console_ctrl_handler, TRUE);
+  process_manager_init();
 
   int exit_code = 0;
 
@@ -75,5 +76,6 @@ int main() {
     wprintf(L"\n");
   }
 
+  process_manager_cleanup();
   return exit_code;
 }

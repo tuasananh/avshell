@@ -34,9 +34,9 @@ static ExecutionResult resume_handler(int argc, LPWSTR* argv) {
       (pNtResumeProcess)(void*)GetProcAddress(hNtdll, "NtResumeProcess");
 
   if (NtResumeProcess) {
-    LONG status = NtResumeProcess(bg_processes[index].handle);
+    LONG status = NtResumeProcess(process_manager_get(index)->handle);
     if (status >= 0) {
-      bg_processes[index].status = STATUS_RUNNING;
+      process_manager_get(index)->status = STATUS_RUNNING;
       wprintf(L"Process %lu resumed.\n", target_pid);
     } else {
       wprintf(L"Failed to resume process %lu. NTSTATUS: 0x%lX\n", target_pid,

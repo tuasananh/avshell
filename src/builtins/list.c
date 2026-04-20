@@ -15,7 +15,7 @@ ExecutionResult list_handler(int argc, LPWSTR* argv) {
 
   clean_dead_processes();
 
-  if (bg_process_count == 0) {
+  if (process_manager_count() == 0) {
     wprintf(L"No background processes running.\n");
     return KEEP_RUNNING(0);
   }
@@ -23,10 +23,10 @@ ExecutionResult list_handler(int argc, LPWSTR* argv) {
   wprintf(L"%-10s %-25s %-15s\n", L"PID", L"Command", L"Status");
   wprintf(L"--------------------------------------------------\n");
 
-  for (int i = 0; i < bg_process_count; i++) {
-    wprintf(L"%-10lu %-25ls %-15ls\n", bg_processes[i].pid,
-            bg_processes[i].command,
-            bg_processes[i].status == STATUS_RUNNING ? L"Running" : L"Stopped");
+  for (size_t i = 0; i < process_manager_count(); i++) {
+    ProcessInfo* p = process_manager_get(i);
+    wprintf(L"%-10lu %-25ls %-15ls\n", p->pid, p->command,
+            p->status == STATUS_RUNNING ? L"Running" : L"Stopped");
   }
 
   return KEEP_RUNNING(0);

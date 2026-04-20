@@ -7,8 +7,10 @@
 #include "../dispatcher.h"
 
 static ExecutionResult path_handler(int argc, LPWSTR* argv) {
-  (void)argc;
-  (void)argv;
+  if (argc != 1) {
+    wprintf(L"Usage: %ls\n", argv[0]);
+    return KEEP_RUNNING(EXIT_FAILURE);
+  }
 
   DWORD buffer_size = GetEnvironmentVariableW(L"PATH", NULL, 0);
   if (buffer_size == 0) {

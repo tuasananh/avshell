@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stddef.h>
 #include <wchar.h>
 #include <windows.h>
 
@@ -11,12 +12,13 @@ typedef struct {
   WCHAR command[256];
   ProcessStatus status;
 } ProcessInfo;
-#define MAX_BG_PROCESSES 100
 
-extern ProcessInfo bg_processes[MAX_BG_PROCESSES];
-extern int bg_process_count;
+void process_manager_init(void);
+void process_manager_cleanup(void);
+ProcessInfo* process_manager_get(size_t index);
+size_t process_manager_count(void);
 
 void add_background_process(DWORD pid, HANDLE handle, LPCWSTR command);
 void remove_background_process(DWORD pid);
 int find_process_index(DWORD pid);
-void clean_dead_processes();
+void clean_dead_processes(void);

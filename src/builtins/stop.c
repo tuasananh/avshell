@@ -31,9 +31,9 @@ static ExecutionResult stop_handler(int argc, LPWSTR* argv) {
       (pNtSuspendProcess)(void*)GetProcAddress(hNtdll, "NtSuspendProcess");
 
   if (NtSuspendProcess) {
-    LONG status = NtSuspendProcess(bg_processes[index].handle);
+    LONG status = NtSuspendProcess(process_manager_get(index)->handle);
     if (status >= 0) {
-      bg_processes[index].status = STATUS_STOPPED;
+      process_manager_get(index)->status = STATUS_STOPPED;
       wprintf(L"Process %lu suspended.\n", target_pid);
     } else {
       wprintf(L"Failed to suspend process %lu. NTSTATUS: 0x%lX\n", target_pid,
