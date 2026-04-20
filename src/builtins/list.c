@@ -7,7 +7,7 @@
 #include "../dispatcher.h"
 #include "../process_manager.h"
 
-ExecutionResult list_handler(int argc, LPWSTR* argv) {
+static ExecutionResult handler(int argc, LPWSTR* argv) {
   if (argc != 1) {
     wprintf(L"Usage: %ls\n", argv[0]);
     return KEEP_RUNNING(EXIT_FAILURE);
@@ -34,4 +34,4 @@ ExecutionResult list_handler(int argc, LPWSTR* argv) {
 
 Command list_command = {.name = L"list",
                         .description = L"Lists all background processes",
-                        .handler = list_handler};
+                        .handler = handler};
