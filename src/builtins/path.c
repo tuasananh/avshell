@@ -24,12 +24,29 @@ static LPWSTR resolve_to_absolute_path(LPCWSTR path) {
     return NULL;
   }
 
-  if (GetFullPathNameW(path, absolute_size, absolute, NULL) == 0) {
-    free(absolute);
-    return NULL;
-  }
+  // Retry if the required size changes between calls.
+  while (true) {
+    DWORD resolved_size =
+        GetFullPathNameW(path, absolute_size, absolute, NULL);
+    if (resolved_size == 0) {
+      free(absolute);
+      return NULL;
+    }
 
-  return absolute;
+    if (resolved_size < absolute_size) {
+      return absolute;
+    }
+
+    DWORD new_size = resolved_size + 1;
+    LPWSTR resized = (LPWSTR)realloc(absolute, new_size * sizeof(WCHAR));
+    if (resized == NULL) {
+      free(absolute);
+      return NULL;
+    }
+
+    absolute = resized;
+    absolute_size = new_size;
+  }
 }
 
 static ExecutionResult path_handler(int argc, LPWSTR* argv) {
@@ -76,9 +93,22 @@ static ExecutionResult addpath_handler(int argc, LPWSTR* argv) {
   }
 
   DWORD attribs = GetFileAttributesW(absolute_path);
-  if (attribs == INVALID_FILE_ATTRIBUTES ||
-      !(attribs & FILE_ATTRIBUTE_DIRECTORY)) {
-    wprintf(L"Error: The directory '%ls' does not exist.\n", absolute_path);
+  if (attribs == INVALID_FILE_ATTRIBUTES) {
+    DWORD error = GetLastError();
+    if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND) {
+      wprintf(L"Error: The directory '%ls' does not exist.\n", absolute_path);
+      free(absolute_path);
+      return KEEP_RUNNING(EXIT_FAILURE);
+    }
+
+    ExecutionResult res =
+        keep_running_with_error(argv[0], error, L"Failed to access directory");
+    free(absolute_path);
+    return res;
+  }
+
+  if (!(attribs & FILE_ATTRIBUTE_DIRECTORY)) {
+    wprintf(L"Error: The path '%ls' is not a directory.\n", absolute_path);
     free(absolute_path);
     return KEEP_RUNNING(EXIT_FAILURE);
   }
