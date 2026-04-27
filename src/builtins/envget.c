@@ -29,15 +29,34 @@ static ExecutionResult handler(int argc, LPWSTR* argv) {
     return KEEP_RUNNING(EXIT_FAILURE);
   }
 
-  LPWSTR buffer = (LPWSTR)malloc(buffer_size * sizeof(WCHAR));
-  if (buffer == NULL) {
-    wprintf(L"Error: Not enough memory!\n");
-    return KEEP_RUNNING(EXIT_FAILURE);
-  }
+  while (true) {
+    LPWSTR buffer = (LPWSTR)malloc(buffer_size * sizeof(WCHAR));
+    if (buffer == NULL) {
+      wprintf(L"Error: Not enough memory!\n");
+      return KEEP_RUNNING(EXIT_FAILURE);
+    }
 
-  GetEnvironmentVariableW(var_name, buffer, buffer_size);
-  wprintf(L"%ls\n", buffer);
-  free(buffer);
+    DWORD actual_size = GetEnvironmentVariableW(var_name, buffer, buffer_size);
+    if (actual_size == 0) {
+      DWORD error = GetLastError();
+      free(buffer);
+      if (error == ERROR_ENVVAR_NOT_FOUND) {
+        wprintf(L"Error: Environment variable '%ls' not found\n", var_name);
+      } else {
+        wprintf(L"Error: Failed to get environment variable\n");
+      }
+      return KEEP_RUNNING(EXIT_FAILURE);
+    }
+
+    if (actual_size < buffer_size) {
+      wprintf(L"%ls\n", buffer);
+      free(buffer);
+      return KEEP_RUNNING(0);
+    }
+
+    free(buffer);
+    buffer_size = actual_size + 1;
+  }
 
   return KEEP_RUNNING(0);
 }
