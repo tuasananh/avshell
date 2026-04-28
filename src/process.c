@@ -3,6 +3,7 @@
 #include <handleapi.h>
 #include <stdint.h>
 #include <wchar.h>
+#include <windows.h>
 
 #include "process_manager.h"
 
@@ -51,6 +52,7 @@ ExecutionResult run_process(LPWSTR input_buffer, bool run_in_background) {
   HANDLE hNullIn = INVALID_HANDLE_VALUE;
 
   if (run_in_background) {
+    creation_flags |= CREATE_NEW_PROCESS_GROUP;
     inherit_handles = TRUE;
 
     SECURITY_ATTRIBUTES sa;
@@ -67,8 +69,8 @@ ExecutionResult run_process(LPWSTR input_buffer, bool run_in_background) {
     }
 
     si.hStdInput = hNullIn;
-    si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+    // si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    // si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
     si.dwFlags |= STARTF_USESTDHANDLES;
   }
 
@@ -109,7 +111,9 @@ ExecutionResult run_process(LPWSTR input_buffer, bool run_in_background) {
   DWORD exit_code = EXIT_SUCCESS;
 
   if (!run_in_background) {
+    g_foreground_process_pid = pi.dwProcessId;
     WaitForSingleObject(pi.hProcess, INFINITE);
+    g_foreground_process_pid = 0;
     GetExitCodeProcess(pi.hProcess, &exit_code);
     CloseHandle(pi.hProcess);
   } else {

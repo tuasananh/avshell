@@ -4,6 +4,8 @@
 
 #include "data_structures/vector.h"
 
+volatile DWORD g_foreground_process_pid = 0;
+
 static Vector bg_processes;
 
 void process_manager_init(void) {
@@ -63,6 +65,8 @@ void clean_dead_processes(void) {
 
     if (GetExitCodeProcess(p->handle, &exit_code)) {
       if (exit_code != STILL_ACTIVE) {
+        wprintf(L"[%zu] Process with PID %d finished with exit code %lu: %ls\n", i,
+                p->pid, exit_code, p->command); 
         remove_background_process(p->pid);
         continue;
       }

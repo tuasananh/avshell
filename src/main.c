@@ -12,6 +12,7 @@
 #define MAX_INPUT_SIZE 1024
 
 WCHAR input_buffer[MAX_INPUT_SIZE];
+HANDLE g_ctrl_c_event;
 
 LPWSTR get_prompt() {
   DWORD length = GetCurrentDirectoryW(0, NULL);
@@ -27,6 +28,17 @@ LPWSTR get_prompt() {
 BOOL WINAPI console_ctrl_handler(DWORD ctrl_type) {
   switch (ctrl_type) {
     case CTRL_C_EVENT:
+      if (g_foreground_process_pid == 0) {
+        wprintf(L"\n");
+      } else {
+        DWORD pid = g_foreground_process_pid;
+        HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
+        if (hProcess != NULL) {
+          TerminateProcess(hProcess, 1);
+          CloseHandle(hProcess);
+        }
+      }
+      SetEvent(g_ctrl_c_event);
       return TRUE;
     default:
       return FALSE;
@@ -39,6 +51,7 @@ int main() {
   process_manager_init();
 
   int exit_code = 0;
+  g_ctrl_c_event = CreateEvent(NULL, TRUE, FALSE, NULL);
 
   while (true) {
     clean_dead_processes();
@@ -47,9 +60,17 @@ int main() {
     free(prompt);  // we are done
 
     if (fgetws(input_buffer, MAX_INPUT_SIZE, stdin) == NULL) {
+      if (WaitForSingleObject(g_ctrl_c_event, 50) == WAIT_OBJECT_0) {
+        ResetEvent(g_ctrl_c_event);
+        clearerr(stdin);  // Clear the EOF/Error state injected by Windows
+                          // interruption
+        wprintf(L"\n");   // Move to new line after Ctrl+C is printed
+        continue;
+      }
       if (feof(stdin)) {
         break;
       }
+      clearerr(stdin);
       wprintf(L"An unexpected error occurred.\n");
       continue;
     }

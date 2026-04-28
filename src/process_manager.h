@@ -4,6 +4,8 @@
 #include <wchar.h>
 #include <windows.h>
 
+extern volatile DWORD g_foreground_process_pid;
+
 typedef enum { STATUS_RUNNING, STATUS_STOPPED } ProcessStatus;
 
 typedef struct {
