@@ -41,23 +41,55 @@ ExecutionResult run_process(LPWSTR input_buffer, bool run_in_background) {
 
   STARTUPINFOW si;
   PROCESS_INFORMATION pi;
+  SECURITY_ATTRIBUTES sa;
 
   ZeroMemory(&si, sizeof(si));
   si.cb = sizeof(si);
   ZeroMemory(&pi, sizeof(pi));
+  ZeroMemory(&sa, sizeof(sa));
+  sa.nLength = sizeof(sa);
+  sa.bInheritHandle = TRUE;
 
   DWORD creation_flags = 0;
   BOOL inherit_handles = FALSE;
   HANDLE hNullIn = INVALID_HANDLE_VALUE;
+  HANDLE hNullOut = INVALID_HANDLE_VALUE;
+  HANDLE hNullErr = INVALID_HANDLE_VALUE;
 
   if (run_in_background) {
-    creation_flags |= CREATE_NEW_PROCESS_GROUP;
+    creation_flags |= CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS;
+
+    hNullIn = CreateFileW(L"NUL", GENERIC_READ,
+                          FILE_SHARE_READ | FILE_SHARE_WRITE, &sa,
+                          OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    hNullOut = CreateFileW(L"NUL", GENERIC_WRITE,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE, &sa,
+                           OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    hNullErr = CreateFileW(L"NUL", GENERIC_WRITE,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE, &sa,
+                           OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (hNullIn == INVALID_HANDLE_VALUE || hNullOut == INVALID_HANDLE_VALUE ||
+        hNullErr == INVALID_HANDLE_VALUE) {
+      if (hNullIn != INVALID_HANDLE_VALUE) CloseHandle(hNullIn);
+      if (hNullOut != INVALID_HANDLE_VALUE) CloseHandle(hNullOut);
+      if (hNullErr != INVALID_HANDLE_VALUE) CloseHandle(hNullErr);
+      return keep_running_with_error(L"avshell", GetLastError(),
+                                     L"Failed to prepare background I/O");
+    }
+
+    inherit_handles = TRUE;
+    si.dwFlags |= STARTF_USESTDHANDLES;
+    si.hStdInput = hNullIn;
+    si.hStdOutput = hNullOut;
+    si.hStdError = hNullErr;
   }
 
   BOOL success = CreateProcessW(NULL, input_buffer, NULL, NULL, inherit_handles,
                                 creation_flags, NULL, NULL, &si, &pi);
 
   if (!success) {
+    wprintf(L"Try to run cmd fallback\n");
     DWORD error_code = GetLastError();
     if (error_code == ERROR_FILE_NOT_FOUND ||
         error_code == ERROR_BAD_EXE_FORMAT) {
@@ -67,9 +99,9 @@ ExecutionResult run_process(LPWSTR input_buffer, bool run_in_background) {
                                  creation_flags, NULL, NULL, &si, &pi);
         free(cmd_cmd);
       } else {
-        if (hNullIn != INVALID_HANDLE_VALUE) {
-          CloseHandle(hNullIn);
-        }
+        if (hNullIn != INVALID_HANDLE_VALUE) CloseHandle(hNullIn);
+        if (hNullOut != INVALID_HANDLE_VALUE) CloseHandle(hNullOut);
+        if (hNullErr != INVALID_HANDLE_VALUE) CloseHandle(hNullErr);
         return keep_running_with_error(
             L"avshell", error_code,
             L"Failed to allocate memory for cmd command");
@@ -81,9 +113,9 @@ ExecutionResult run_process(LPWSTR input_buffer, bool run_in_background) {
     }
 
     if (!success) {
-      if (hNullIn != INVALID_HANDLE_VALUE) {
-        CloseHandle(hNullIn);
-      }
+      if (hNullIn != INVALID_HANDLE_VALUE) CloseHandle(hNullIn);
+      if (hNullOut != INVALID_HANDLE_VALUE) CloseHandle(hNullOut);
+      if (hNullErr != INVALID_HANDLE_VALUE) CloseHandle(hNullErr);
       return keep_running_with_error(L"avshell", error_code,
                                      L"Command not found");
     }
@@ -103,9 +135,9 @@ ExecutionResult run_process(LPWSTR input_buffer, bool run_in_background) {
 
   if (pi.hThread != NULL) CloseHandle(pi.hThread);
 
-  if (hNullIn != INVALID_HANDLE_VALUE) {
-    CloseHandle(hNullIn);
-  }
+  if (hNullIn != INVALID_HANDLE_VALUE) CloseHandle(hNullIn);
+  if (hNullOut != INVALID_HANDLE_VALUE) CloseHandle(hNullOut);
+  if (hNullErr != INVALID_HANDLE_VALUE) CloseHandle(hNullErr);
 
   return KEEP_RUNNING(exit_code);
 }

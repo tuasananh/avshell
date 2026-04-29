@@ -13,6 +13,17 @@
 
 WCHAR input_buffer[MAX_INPUT_SIZE];
 
+static void restore_console_input_mode(void) {
+  HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+  if (hStdin == INVALID_HANDLE_VALUE || hStdin == NULL) return;
+
+  DWORD mode;
+  if (!GetConsoleMode(hStdin, &mode)) return;
+
+  mode |= ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT;
+  SetConsoleMode(hStdin, mode);
+}
+
 LPWSTR get_prompt() {
   DWORD length = GetCurrentDirectoryW(0, NULL);
   LPWSTR prompt = (LPWSTR)malloc((length + 3) * sizeof(WCHAR));
@@ -41,6 +52,7 @@ int main() {
   int exit_code = 0;
 
   while (true) {
+    restore_console_input_mode();
     clean_dead_processes();
     LPWSTR prompt = get_prompt();
     wprintf(L"%ls", prompt);
